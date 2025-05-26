@@ -1,7 +1,6 @@
 
 from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
 import numpy as np
 from io import BytesIO
 from PIL import Image
@@ -10,18 +9,17 @@ import os
 
 app = FastAPI()
 
-# Serve static HTML/CSS/JS files
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
-# Load the model
-MODEL_PATH = os.path.join("model", "1.keras")
+MODEL_PATH = "1.keras"
 MODEL = tf.keras.models.load_model(MODEL_PATH)
 CLASS_NAMES = ["Early Blight", "Late Blight", "Healthy"]
 
-# Image pre-processing
 def read_file_as_image(data) -> np.ndarray:
-    image = Image.open(BytesIO(data)).resize((256, 256))  # Resize if needed
+    image = Image.open(BytesIO(data)).resize((256, 256))
     return np.array(image)
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    return FileResponse("index.html")
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
@@ -36,3 +34,8 @@ async def predict(file: UploadFile = File(...)):
         "class": predicted_class,
         "confidence": confidence
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
