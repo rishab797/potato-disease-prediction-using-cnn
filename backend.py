@@ -20,8 +20,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-MODEL_PATH = r"C:\Users\lenovo\Downloads\final\api\potato-disease-prediction-using-cnn\1.keras"
-MODEL = tf.keras.models.load_model( r"C:\Users\lenovo\Downloads\final\api\potato-disease-prediction-using-cnn\1.keras")
+MODEL_PATH = "1.keras"
+MODEL = tf.keras.models.load_model(MODEL_PATH)
+
 CLASS_NAMES = ["Early Blight", "Late Blight", "Healthy"]
 
 @app.get("/")
