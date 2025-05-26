@@ -8,6 +8,9 @@ import tensorflow as tf
 import os
 from fastapi.middleware.cors import CORSMiddleware
 
+
+
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # or specify your frontend domain
@@ -15,8 +18,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app = FastAPI()
 
 MODEL_PATH = "1.keras"
 MODEL = tf.keras.models.load_model(MODEL_PATH)
