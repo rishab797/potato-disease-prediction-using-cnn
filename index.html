@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leaf Disease Predictor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      color: #333;
+      transition: background 0.4s, color 0.4s;
+    }
+
+    body.dark {
+      background: #1e1e2f;
+      color: #eee;
+    }
+
+    .dashboard {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px;
+      background: #0072ff;
+      color: white;
+      padding: 30px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 40px;
+    }
+
+    .sidebar nav a {
+      display: block;
+      margin: 10px 0;
+      color: white;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .sidebar nav a.active,
+    .sidebar nav a:hover {
+      font-weight: bold;
+      text-decoration: underline;
+    }
+
+    .toggle-theme {
+      margin-top: 20px;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .upload-section {
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      transition: background 0.3s;
+    }
+
+    body.dark .upload-section {
+      background: #2c2c3e;
+    }
+
+    .upload-section h1 {
+      margin-bottom: 20px;
+      font-size: 28px;
+      animation: fadeIn 1.2s ease;
+    }
+
+    input[type="file"] {
+      display: block;
+      margin: 20px 0;
+    }
+
+    button {
+      background: #0072ff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #0056d8;
+    }
+
+    #preview {
+      margin-top: 20px;
+      max-width: 100%;
+      max-height: 250px;
+      display: none;
+      border-radius: 10px;
+    }
+
+    .result-card {
+      margin-top: 20px;
+      font-size: 18px;
+      background: #e0f7ff;
+      padding: 15px;
+      border-radius: 10px;
+      display: none;
+      animation: slideUp 0.6s ease;
+    }
+
+    /* History */
+    .history-section {
+      background: #ffffffcc;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+    }
+
+    body.dark .history-section {
+      background: #333444;
+    }
+
+    .history-section ul {
+      list-style: none;
+      padding-left: 20px;
+    }
+
+    .history-section li {
+      margin: 8px 0;
+      font-size: 16px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar">
+      <h2>🌿 LeafAI</h2>
+      <nav>
+        <a href="#" class="active">Predict</a>
+        <a href="#">History</a>
+        <a href="#">About</a>
+      </nav>
+      <div class="toggle-theme">
+        <label>
+          <input type="checkbox" id="themeToggle" />
+          Dark Mode
+        </label>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section class="upload-section">
+        <h1 class="animated">Leaf Disease Prediction</h1>
+        <input type="file" id="fileInput" accept="image/*" />
+        <button onclick="uploadImage()">Predict</button>
+        <img id="preview" />
+        <div id="result" class="result-card"></div>
+      </section>
+
+      <section class="history-section">
+        <h2>📜 Prediction History</h2>
+        <ul id="history">
+          <!-- Entries will be added dynamically -->
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const preview = document.getElementById("preview");
+    const result = document.getElementById("result");
+    const history = document.getElementById("history");
+
+    async function uploadImage() {
+      const input = document.getElementById("fileInput");
+      const file = input.files[0];
+
+      if (!file) {
+        result.innerText = "Please select an image first.";
+        result.style.display = "block";
+        return;
+      }
+
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = "block";
+      result.style.display = "block";
+      result.innerText = "Analyzing...";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/predict", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          result.innerHTML = `
+            <strong>Prediction:</strong> ${data.class}<br>
+            <strong>Confidence:</strong> ${(data.confidence * 100).toFixed(2)}%
+          `;
+          addToHistory(data.class, file.name);
+        } else {
+          result.innerText = "Prediction failed.";
+        }
+      } catch (err) {
+        console.error(err);
+        result.innerText = "Error while connecting to server.";
+      }
+    }
+
+    function addToHistory(prediction, filename) {
+      const li = document.createElement("li");
+      li.textContent = `${filename}: ${prediction}`;
+      history.prepend(li);
+    }
+
+    document.getElementById("themeToggle").addEventListener("change", (e) => {
+      document.body.classList.toggle("dark", e.target.checked);
+    });
+  </script>
+</body>
+</html>
