@@ -1,47 +1,38 @@
 
 from fastapi import FastAPI, UploadFile, File
-import uvicorn
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 import numpy as np
 from io import BytesIO
 from PIL import Image
 import tensorflow as tf
-from fastapi.middleware.cors import CORSMiddleware
-
-def read_file_as_image(data) -> np.ndarray:
-    image = Image.open(BytesIO(data))
-    return np.array(image)
+import os
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Or specify "http://127.0.0.1"
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-MODEL_PATH = "1.keras"
-MODEL = tf.keras.models.load_model(MODEL_PATH)
+# Serve static HTML/CSS/JS files
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
+# Load the model
+MODEL_PATH = os.path.join("model", "1.keras")
+MODEL = tf.keras.models.load_model(MODEL_PATH)
 CLASS_NAMES = ["Early Blight", "Late Blight", "Healthy"]
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to the FastAPI server!"}
-
+# Image pre-processing
+def read_file_as_image(data) -> np.ndarray:
+    image = Image.open(BytesIO(data)).resize((256, 256))  # Resize if needed
+    return np.array(image)
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
-    image= read_file_as_image(await file.read())
-    MODEL.predict(np.expand_dims(image, axis=0))
-    predictions = MODEL.predict(np.expand_dims(image, axis=0))
-    index=np.argmax(predictions[0])
-    pridicted_class = CLASS_NAMES[index]
-    confidence=np.max(predictions[0])
+    image = read_file_as_image(await file.read())
+    image_batch = np.expand_dims(image, axis=0)
+    predictions = MODEL.predict(image_batch)
+    index = np.argmax(predictions[0])
+    predicted_class = CLASS_NAMES[index]
+    confidence = float(np.max(predictions[0]))
     return {
         "filename": file.filename,
-        "class": pridicted_class,
-        "confidence": float(confidence)}
-
-if __name__ == "__main__":
-    uvicorn.run(app, port=8000, host="localhost", log_level="info") 
+        "class": predicted_class,
+        "confidence": confidence
+    }
